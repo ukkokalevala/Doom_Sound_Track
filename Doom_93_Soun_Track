@@ -1,0 +1,139 @@
+#include "pitches.h" // Use the pitches.h from earlier
+
+#define BUZZER_PIN 8
+#define BUTTON_1 5  // Weapon cycle
+#define BUTTON_2 4  // Environment cycle
+
+// DOOM E1M1 (At Doom's Gate) - Extended 48-note version
+int doomMelody[] = {
+  NOTE_E2, NOTE_E2, NOTE_E3, NOTE_E2, NOTE_E2, NOTE_D3, NOTE_E2, NOTE_E2,
+  NOTE_C3, NOTE_E2, NOTE_E2, NOTE_AS2, NOTE_E2, NOTE_E2, NOTE_B2, NOTE_C3,
+  NOTE_E2, NOTE_E2, NOTE_E3, NOTE_E2, NOTE_E2, NOTE_D3, NOTE_E2, NOTE_E2,
+  NOTE_C3, NOTE_E2, NOTE_E2, NOTE_AS2, NOTE_E2, NOTE_E2, NOTE_B2, NOTE_C3,
+  NOTE_E2, NOTE_E2, NOTE_E3, NOTE_E2, NOTE_E2, NOTE_D3, NOTE_E2, NOTE_E2,
+  NOTE_C3, NOTE_E2, NOTE_E2, NOTE_AS2, NOTE_E2, NOTE_E2, NOTE_B2, NOTE_C3
+};
+int noteDurations[] = {
+  4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4,
+  4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4,
+  4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4
+};
+
+// Sound tracking
+int weaponIndex = 0;    // 0-2: shotgun/chaingun/rocket
+int envIndex = 0;       // 0-2: health/demon/door
+unsigned long lastNoteTime = 0;
+int currentNote = 0;
+bool isPlayingSFX = false;
+
+void setup() {
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(BUTTON_1, INPUT_PULLUP);
+  pinMode(BUTTON_2, INPUT_PULLUP);
+}
+
+void loop() {
+  // Non-blocking DOOM music (pauses during SFX)
+  if (!isPlayingSFX && millis() - lastNoteTime > (1000 / noteDurations[currentNote]) * 1.3) {
+    tone(BUZZER_PIN, doomMelody[currentNote], 1000 / noteDurations[currentNote]);
+    currentNote = (currentNote + 1) % 48;
+    lastNoteTime = millis();
+  }
+
+  // Button 1: Cycle weapons
+  if (digitalRead(BUTTON_1) == LOW) {
+    playWeapon();
+    delay(200); // Debounce
+    while (digitalRead(BUTTON_1) == LOW); // Wait for release
+  }
+
+  // Button 2: Cycle environment sounds
+  if (digitalRead(BUTTON_2) == LOW) {
+    playEnvironment();
+    delay(200);
+    while (digitalRead(BUTTON_2) == LOW);
+  }
+}
+
+void playWeapon() {
+  isPlayingSFX = true;
+  noTone(BUZZER_PIN);
+  
+  switch (weaponIndex) {
+    case 0: shotgun(); break;
+    case 1: chaingun(); break;
+    case 2: rocketLauncher(); break;
+  }
+  
+  weaponIndex = (weaponIndex + 1) % 3;
+  isPlayingSFX = false;
+}
+
+void playEnvironment() {
+  isPlayingSFX = true;
+  noTone(BUZZER_PIN);
+  
+  switch (envIndex) {
+    case 0: healthPickup(); break;
+    case 1: demonGrowl(); break;
+    case 2: doorOpen(); break;
+  }
+  
+  envIndex = (envIndex + 1) % 3;
+  isPlayingSFX = false;
+}
+
+// ---- DOOM SOUND EFFECTS ----
+void shotgun() {
+  // Sharp blast with decay
+  for (int i = 0; i < 3; i++) {
+    tone(BUZZER_PIN, 1500 - (i * 300), 30);
+    delay(40);
+  }
+  noTone(BUZZER_PIN);
+}
+
+void chaingun() {
+  // Rapid fire pulses
+  for (int i = 0; i < 15; i++) {
+    tone(BUZZER_PIN, 800 + (i % 3 * 100), 20);
+    delay(25);
+  }
+  noTone(BUZZER_PIN);
+}
+
+void rocketLauncher() {
+  // Low-to-high explosion
+  for (int freq = 200; freq <= 800; freq += 30) {
+    tone(BUZZER_PIN, freq, 30);
+    delay(35);
+  }
+  noTone(BUZZER_PIN);
+}
+
+void healthPickup() {
+  // Bright double beep
+  tone(BUZZER_PIN, 1200, 80);
+  delay(100);
+  tone(BUZZER_PIN, 1500, 80);
+  delay(100);
+  noTone(BUZZER_PIN);
+}
+
+void demonGrowl() {
+  // Falling pitch growl
+  for (int freq = 400; freq >= 150; freq -= 10) {
+    tone(BUZZER_PIN, freq, 30);
+    delay(40);
+  }
+  noTone(BUZZER_PIN);
+}
+
+void doorOpen() {
+  // Mechanical slide
+  for (int freq = 300; freq <= 700; freq += 15) {
+    tone(BUZZER_PIN, freq, 30);
+    delay(40);
+  }
+  noTone(BUZZER_PIN);
+}
